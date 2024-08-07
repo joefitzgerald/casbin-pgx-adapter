@@ -145,7 +145,7 @@ func (a *Adapter) LoadPolicy(model model.Model) error {
 	ctx, cancel := context.WithTimeout(context.Background(), a.timeout)
 	defer cancel()
 	var pType, v0, v1, v2, v3, v4, v5 pgtype.Text
-	rows, err := a.pool.Query(ctx, fmt.Sprintf(`SELECT "p_type", "v0", "v1", "v2", "v3", "v4", "v5" FROM %s`, a.schemaTable()))
+	rows, err := a.pool.Query(ctx, fmt.Sprintf(`SELECT "ptype", "v0", "v1", "v2", "v3", "v4", "v5" FROM %s`, a.schemaTable()))
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (a *Adapter) SavePolicy(model model.Model) error {
 		_, err = tx.CopyFrom(
 			context.Background(),
 			a.tableIdentifier(),
-			[]string{"id", "p_type", "v0", "v1", "v2", "v3", "v4", "v5"},
+			[]string{"id", "ptype", "v0", "v1", "v2", "v3", "v4", "v5"},
 			pgx.CopyFromRows(rows),
 		)
 		return err
@@ -227,7 +227,7 @@ func (a *Adapter) SavePolicy(model model.Model) error {
 
 func (a *Adapter) insertPolicyStmt() string {
 	return fmt.Sprintf(`
-		INSERT INTO %s (id, p_type, v0, v1, v2, v3, v4, v5)
+		INSERT INTO %s (id, ptype, v0, v1, v2, v3, v4, v5)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING
 	`, a.schemaTable())
 }
@@ -300,7 +300,7 @@ func (a *Adapter) RemovePolicies(sec string, ptype string, rules [][]string) err
 // RemoveFilteredPolicy removes policy rules that match the filter from the storage.
 func (a *Adapter) RemoveFilteredPolicy(sec string, ptype string, fieldIndex int, fieldValues ...string) error {
 	var sb strings.Builder
-	_, err := sb.WriteString(fmt.Sprintf("DELETE FROM %s WHERE p_type = $1", a.schemaTable()))
+	_, err := sb.WriteString(fmt.Sprintf("DELETE FROM %s WHERE ptype = $1", a.schemaTable()))
 	if err != nil {
 		return err
 	}
@@ -330,12 +330,12 @@ func (a *Adapter) loadFilteredPolicy(model model.Model, filter *Filter, handler 
 		sb                            = &strings.Builder{}
 	)
 
-	fmt.Fprintf(sb, `SELECT "p_type", "v0", "v1", "v2", "v3", "v4", "v5" FROM %s WHERE `, a.schemaTable())
+	fmt.Fprintf(sb, `SELECT "ptype", "v0", "v1", "v2", "v3", "v4", "v5" FROM %s WHERE `, a.schemaTable())
 
 	buildQuery := func(policies [][]string, ptype string) {
 		if len(policies) > 0 {
 			args = append(args, ptype)
-			fmt.Fprintf(sb, `(p_type = $%d AND (`, len(args))
+			fmt.Fprintf(sb, `(ptype = $%d AND (`, len(args))
 			for i, p := range policies {
 				fmt.Fprint(sb, `(`)
 				for j, v := range p {
@@ -474,7 +474,7 @@ func (a *Adapter) createTable() error {
 	_, err := a.pool.Exec(ctx, fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			id text PRIMARY KEY,
-			p_type text,
+			ptype text,
 			v0 text,
 			v1 text,
 			v2 text,
